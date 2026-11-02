@@ -1,0 +1,48 @@
+---
+# tasks file for roles/db
+- name: database is installed
+  ansible.builtin.apt:
+    name: mariadb-server
+    state: present
+
+- name: python mysql module is installed
+  ansible.builtin.apt:
+    name: python3-pymysql
+    state: present
+
+- name: database service is started and enabled
+  ansible.builtin.service:
+    name: mariadb
+    state: started
+    enabled: true
+
+- name: create user and authenticate with secret in mysql
+  community.mysql.mysql_user:
+    name: appuser
+    host: "%"
+    password: "{{ vault_db_password }}"
+    priv: "appdb.*:SELECT,INSERT"
+    login_unix_socket: /run/mysqld/mysqld.sock
+  no_log: true
+
+- name: listen on all addresses
+  ansible.builtin.copy:
+    dest: /etc/mysql/mariadb.conf.d/99-bind.cnf
+    content: |
+      [mysqld]
+      bind-address = 0.0.0.0
+    mode: "0644"
+  notify: restart mariadb
+
+- name: app database exists
+  community.mysql.mysql_db:
+    name: appdb
+    login_unix_socket: /run/mysqld/mysqld.sock
+
+- name: table with data
+  community.mysql.mysql_query:
+    login_db: appdb
+    login_unix_socket: /run/mysqld/mysqld.sock
+    query:
+      - CREATE TABLE IF NOT EXISTS messages (id INT PRIMARY KEY, text VARCHAR(100))
+      - INSERT IGNORE INTO messages VALUES (1, 'Hello from MariaDB on node2!')

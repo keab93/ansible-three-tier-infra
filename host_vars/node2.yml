@@ -1,0 +1,3 @@
+vhdx_path: 'C:\Users\Public\Documents\Hyper-V\Virtual hard disks\node2.vhdx'
+vhdx_type: 'Dynamic'
+vm_switch: 'VS1'

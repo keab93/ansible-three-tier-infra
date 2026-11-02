@@ -1,0 +1,33 @@
+# {{ ansible_facts['hostname'] }}
+
+- Role: {{ group_names | join(', ') }}
+- CPU: {{ ansible_facts['processor_vcpus'] }} vCPU
+- RAM: {{ ansible_facts['memtotal_mb'] }} MB
+- IP: {{ ansible_facts['default_ipv4']['address'] }}
+- All IPv4 addresses: {{ ansible_facts['all_ipv4_addresses'] | join(', ') }}
+- All IPv6 addresses: {{ ansible_facts['all_ipv6_addresses'] | join(', ') }}
+- OS: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
+- Uptime: {{ ansible_facts['uptime_seconds'] // 86400 }} days
+- Virtual switch: {{ vm_switch }}
+
+### Disk info
+
+Hyper-V virtual hard disk.
+
+- VHDX on the host: {{ vhdx_path }}
+- VHDX type: {{ vhdx_type }}
+
+#### Disk partitions
+
+{% for m in ansible_facts['mounts'] %}
+- {{ m['mount'] }} ({{ m['device'] }}, {{ m['fstype'] }}): {{ (m['size_available'] / 1024**3) | round(1) }} of {{ (m['size_total'] / 1024**3) | round(1) }} GB free
+{% endfor %}
+
+
+## All installed packages ({{ ansible_facts['packages'] | length }})
+
+{% for name in ansible_facts['packages'] | sort %}
+- {{ name }} {{ ansible_facts['packages'][name][0]['version'] }}
+{% endfor %}
+
+

@@ -1,0 +1,15 @@
+# Ansible Vault 
+.vault_pass
+.vault_pass*
+*.vault_pass
+
+# Ansible runtime
+*.retry
+*.log
+
+# Keys
+id_*
+*.pem
+devops_admin
+devops_admin.pub
+

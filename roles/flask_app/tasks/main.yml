@@ -1,0 +1,35 @@
+---
+# tasks file for roles/flask_app
+- name: Install flask
+  ansible.builtin.apt:
+    name:
+      - python3-pymysql
+      - python3-flask
+      - gunicorn
+    state: present
+
+- name: Create app dir
+  ansible.builtin.file:
+    path: /opt/app
+    state: directory
+
+- name: systemd service for the app
+  ansible.builtin.template:
+    src: app.service.j2
+    dest: /etc/systemd/system/app.service
+  notify: restart app
+
+- name: python app
+  ansible.builtin.template:
+    src: app.py.j2
+    owner: www-data
+    dest: /opt/app/app.py
+    mode: '0600'
+  notify: restart app
+
+- name: systemd app handle
+  ansible.builtin.systemd:
+    name: app
+    state: started
+    enabled: true
+    daemon_reload: true

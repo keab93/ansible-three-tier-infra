@@ -1,0 +1,11 @@
+- name: Generate server report
+  hosts: all
+
+  tasks:
+    - name: Gather packages
+      ansible.builtin.package_facts:
+    - name: Generate the file
+      ansible.builtin.template:
+        src: ci_report.md.j2
+        dest: "reports/{{ ansible_facts['hostname'] }}_inventory_report.md"
+      delegate_to: localhost

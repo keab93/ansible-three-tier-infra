@@ -1,0 +1,23 @@
+- name: Install basic tools
+  ansible.builtin.apt:
+    name:
+      - curl
+      - vim
+      - tree
+    state: present
+    update_cache: true
+
+- name: Add devops_admin
+  ansible.builtin.user:
+    name: devops_admin
+    state: present
+    create_home: true
+    groups: sudo
+    append: true
+    shell: /bin/bash
+
+- name: Install controlnode's public key
+  ansible.posix.authorized_key:
+    user: devops_admin
+    key: "{{ lookup('file', '~/.ssh/devops_admin.pub') }}"
+    state: present

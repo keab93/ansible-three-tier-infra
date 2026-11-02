@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Facts about the server!</title>
+  </head>
+  <body>
+   <p>
+   {{ansible_facts['hostname']}}
+
+   {{ansible_facts['default_ipv4']['address']}}
+   {{ansible_facts['distribution']}}
+   {{ansible_facts['distribution_version']}}
+   </p>
+
+  </body>
+</html>
