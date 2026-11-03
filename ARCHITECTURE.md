@@ -147,7 +147,7 @@ Relations between the servers:
 
 All VMs are created from the same disk. I installed Ubuntu Server 24.04 in the VM `ubuntu-base`, updated it and installed avahi-daemon. Then I copied the disk and made it read-only in case I need a fresh image later. `hyper-v/create-vms.ps1` copies the disk once per VM and creates the VMs on VS1.
 
-This is called a golden image, or golden master: one reference image that all machines are cloned from. All VMs start in the same known state, and from there Ansible takes over. I have kept the image small on purpose. It only has the OS, SSH and avahi, and everything else is done by the playbooks. If you put more into the image the VMs are ready faster, but the image gets old and has to be rebuilt every time something changes. With a small image the configuration is in one place, the playbooks.
+This is called a golden image: one reference image that all machines are cloned from. All VMs start in the same known state, and from there Ansible takes over. I have kept the image small on purpose. It only has the OS, SSH and avahi, and everything else is done by the playbooks. If you put more into the image the VMs are ready faster, but the image gets old and has to be rebuilt every time something changes. With a small image the configuration is in one place, the playbooks.
 
 ### What has to be unique per VM
 
