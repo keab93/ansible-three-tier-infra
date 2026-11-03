@@ -35,7 +35,7 @@ Design decisions are described in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Requirements: a Hyper-V host, the base image as `base.vhdx` and Ansible on the control node. The Ubuntu `ansible` package includes the collections the roles use. With only `ansible-core`, install them from `requirements.yml`.
 
-1. Create the VMs with `hyper-v/create-vms.ps1` and give each one a unique hostname and machine-id (see [ARCHITECTURE.md](ARCHITECTURE.md#5-the-base-image-golden-image)).
+1. Create the VMs with `hyper-v/create-vms.ps1` and give each one a unique hostname and machine-id (see [ARCHITECTURE.md](ARCHITECTURE.md#golden-image)).
 2. Set up SSH from the control node:
    ```bash
    ssh-keygen -t ed25519

@@ -1,162 +1,14 @@
-# Architecture and design decisions
+# Architecture
 
-## 1. System overview and choice of tools
+Design decisions, dependencies and known limitations for the environment described in the [README](README.md).
 
-The environment consists of three virtual machines in Hyper-V with Ubuntu 24.04, connected to the virtual switch VS1.
+## Golden image
 
-| VM | Group in the inventory | Services |
-|---|---|---|
-| keat-controlnode | - | Ansible, clone of the repo |
-| keat-node1 | webservers | nginx (:80), Flask with Gunicorn (:8000) |
-| keat-node2 | dbservers | MariaDB (:3306) |
+All VMs are created from one golden image: a disk with Ubuntu Server 24.04 installed and updated, plus SSH and avahi-daemon for mDNS. The image is kept read-only. `hyper-v/create-vms.ps1` copies it once per VM and creates Generation 2 VMs on the virtual switch VS1.
 
-### Choice of tool
+The image is kept minimal on purpose. Everything beyond the OS is applied by Ansible, so changes are made in the playbooks and don't require a new image. A larger image would give ready-to-use VMs sooner, but would have to be rebuilt for every change.
 
-Compared to other CM tools such as Puppet, Ansible is less resource-intensive on the nodes and is also quicker to set up. The only things needed on the nodes are SSH, Python and a way to reach them over the network from the control node.
-
-### Agentless vs. agent-based
-
-The nodes only need SSH and Python, which Ubuntu has from the start. Ansible connects from the control node over SSH when a playbook runs and doesn't install any agent on the nodes.
-
-The advantage of Ansible in this case is that the nodes are unaffected if the control node goes down. It is also less resource-intensive to run them without an agent.
-
-### Ansible vs. Puppet
-
-How the code reaches the nodes:
-
-- Ansible reaches the nodes with SSH from the control node. It sends Python scripts and runs them, and then they are removed. Nothing installed on the node is related to Ansible.
-- Puppet installs an agent on every node and a server on the control node. You set a frequency that decides how often the agent contacts the server to ask for the configuration. If something changes on the node and deviates from the configuration, it is corrected automatically the next time the agent contacts the server. In Ansible this can wait until the next time the playbook runs.
-
-The order the code runs in:
-
-You can't copy a configuration file to a directory that doesn't exist yet. If the task that copies a config file for nginx comes before the task that installs nginx, the playbook can't run in Ansible, and the tasks after it don't run either since the playbook stops at the error. In Puppet the dependency is declared, so Puppet installs nginx before it tries to copy the file. This requires that you know about the dependency though, and if you know about it you hopefully won't put the tasks in the wrong order in Ansible either.
-
-| | Ansible | Puppet |
-|---|---|---|
-| Architecture | agentless, code is sent from the control node with SSH | an agent on every node with a central server |
-| Language | YAML (playbooks), Jinja2 (templates) | Puppet DSL (its own language), Ruby |
-| Style | procedural: things are done in the order you write them | declarative: you declare resources and relations |
-| When does it run? | when someone runs it | automatically |
-| What the nodes need | SSH + Python | Puppet agent + certificate |
-
-- Both are idempotent, which is crucial for what they do.
-- Ansible is quicker to set up. You only need SSH and Python on the nodes, which Ubuntu has by default.
-- Puppet in some cases has an advantage when it comes to configuration drift, because the agents on the nodes check for changes against the server.
-- In Puppet you declare dependencies and other relations, and the order of operations takes them into account. That can make it easier to change long conf files without breaking something.
-
-### Folder and role structure
-
-There is one `ansible.cfg` in the root of the repo that points to `inventory.ini`. The playbooks are run from the root.
-
-```
-.
-├── ansible.cfg
-├── inventory.ini
-├── inventory.py
-├── group_vars/all/vault.yml
-├── host_vars/
-├── roles/
-│   ├── common/
-│   ├── webserver/
-│   ├── db/
-│   └── flask_app/
-├── templates/
-├── site.yml
-└── report.yml
-```
-
-The roles were created with `ansible-galaxy role init`, and I have removed the folders that weren't used:
-
-| Role | Does |
-|---|---|
-| common | basic tools, the user devops_admin and its SSH key |
-| webserver | nginx and a start page from a Jinja2 template |
-| db | MariaDB, the database appdb and the user appuser |
-| flask_app | the Flask app as a systemd service |
-
-This structure makes it easier to troubleshoot. Every time a playbook runs you can read which tasks run without errors, make a change or end with an error. It is also easier to copy the roles you want to another project.
-
-## 2. Security and secrets management
-
-### Ansible Vault
-
-The database password is in `group_vars/all/vault.yml` and is encrypted with `ansible-vault`. In Git the file starts with `$ANSIBLE_VAULT;1.1;AES256`. The vault password is not in the repo but is given with `--ask-vault-pass` at runtime, and `.gitignore` excludes `.vault_pass`. Tasks that use the password have `no_log: true` so that it isn't shown in Ansible's output. My own `vault.yml` is not in this repo, you create your own (see the README).
-
-A possible security gap I have found is that the password is always encrypted on the control node, but it can be read by anyone with access to the nodes. It is in plain text in `/opt/app/app.py` on node1, in the app's error log and in the bash history. I could clear the history and only use the password when it is available as an environment variable.
-
-### Privilege escalation and SSH
-
-`become: true` is set per play. With `-K` Ansible asks for the sudo password at runtime, so it isn't saved in any file. The control node logs in to the nodes with an ed25519 key. The `common` role creates the user devops_admin with its own key and membership in the group sudo. Private keys are excluded in `.gitignore` (`id_*`, `*.pem`, `devops_admin`).
-
-No file contains a password, and keys are used instead of passwords to log in.
-
-## 3. Scalability and dynamics
-
-### Dynamic vs. static inventories
-
-The static inventory is `inventory.ini` with the groups `[webservers]` and `[dbservers]`. `inventory.py` is a dynamic inventory that answers `--list` and `--host` with JSON and is used with `ansible all -i inventory.py -m ping`. For now it returns the same hosts as `inventory.ini`.
-
-In the static .ini file you have to write in every new node with its address. With a dynamic inventory you could fetch the inventory JSON from a cloud service's API to keep better track of the VMs that are available for configuration.
-
-### Jinja2 and variable separation
-
-- `roles/webserver/templates/index.html.j2` shows hostname and OS from Ansible facts.
-- `templates/ci_report.md.j2` creates a report per server. Information that only exists on the Hyper-V host is in `host_vars`.
-- `roles/flask_app/templates/app.py.j2` gets the database IP with `hostvars['node2']['ansible_default_ipv4']['address']` and the password from Vault.
-
-This structure makes it much easier to reuse the code. You can for example change the host vars and run the playbook again to create an identical environment that you can use as a development or test environment.
-
-## 4. Operations, optimization and recovery
-
-### Idempotency
-
-Ansible doesn't send `sudo apt install`. It checks if the node has the desired `state`. If the desired state is already reached it does nothing, and you can run the playbook a hundred times without it having any effect, unless the package has been removed.
-
-The second run of the playbook that installs nginx gave `changed=0`. Modules like `apt`, `service`, `user` and `file` describe a desired state and only do something if the node isn't already in that state. Counterexample: my first version of the app started two Python scripts with `shell: nohup ... &`. Every run started a new process, and the process didn't survive a reboot. In this version it is replaced with a systemd service (`state: started`, `enabled: true`).
-
-Idempotency means that you can run the playbook over and over without any negative consequences. The only things that change are new configurations or corrections of configuration drift.
-
-### Troubleshooting and verification
-
-Handlers restart services only when a configuration has changed: `restart nginx` (webserver), `restart mariadb` (db) and `restart app` (flask_app). Tools I used after rollout:
-
-| Command | Shows |
-|---|---|
-| `curl http://keat-node1.local:8000` | that the app responds and fetches data from node2 |
-| `ss -tlnp` | which ports are listening and on which addresses |
-| `journalctl -u app` | the app's log and Python errors |
-| `my_print_defaults mysqld` | which settings MariaDB reads |
-
-### CMDB
-
-Every server and its properties (CPU, RAM, IP, OS and packages) are CIs. `report.yml` creates the reports from Ansible facts every time it runs, so they show what the servers look like right now. They are saved in Git and work as a simple CMDB. Since they are updated automatically, the risk of configuration drift is lower compared to a CMDB that is updated by hand. If you run `report.yml` again, `git diff` shows what has changed on the servers since the last report.
-
-The information about the virtual hard disk only exists on the Hyper-V host, so it is written by hand in `host_vars`.
-
-Relations between the servers:
-
-| From → To | Via | Impact if To goes down |
-|---|---|---|
-| Ansible on controlnode → node1, node2 | SSH, mDNS, VS1 | Ansible can't configure the nodes or run any playbook. (If From goes down: node1 and node2 can't be configured anymore, but they keep running with the configuration from the latest playbook run.) |
-| controlnode → node2 MariaDB | Vault password and user management | Can't create more users or change existing passwords from the control node |
-| browser → node1 | HTTP :80 nginx, :8000 Flask | The site can't be reached |
-| node1 Flask app → node2 MariaDB | :3306 | The app can't fetch any data and returns an error |
-| all VMs → Hyper-V host / VS1 | virtual hardware + network | Everything stops working. Everything can be restored from disk backups, except possibly the database. The database can be stopped during the backup. |
-
-## 5. The base image (golden image)
-
-All VMs are created from the same disk. I installed Ubuntu Server 24.04 in the VM `ubuntu-base`, updated it and installed avahi-daemon. Then I copied the disk and made it read-only in case I need a fresh image later. `hyper-v/create-vms.ps1` copies the disk once per VM and creates the VMs on VS1.
-
-This is called a golden image: one reference image that all machines are cloned from. All VMs start in the same known state, and from there Ansible takes over. I have kept the image small on purpose. It only has the OS, SSH and avahi, and everything else is done by the playbooks. If you put more into the image the VMs are ready faster, but the image gets old and has to be rebuilt every time something changes. With a small image the configuration is in one place, the playbooks.
-
-### What has to be unique per VM
-
-A clone is an exact copy, so all servers think they are the same server. Everything that has to be unique has to be changed after cloning:
-
-- Hostname: set with `hostnamectl` and replaced in `/etc/hosts`.
-- machine-id: `systemd-machine-id-setup` only creates a new ID if `/etc/machine-id` is empty, so the file is emptied first.
-
-Run on each VM after cloning:
+A clone is an exact copy, so the values that must be unique per machine are set after cloning. `systemd-machine-id-setup` only generates a new ID when `/etc/machine-id` is empty, so the file is emptied first. Run on each VM:
 
 ```bash
 NEW=keat-node1   # keat-node2 and keat-controlnode on the other VMs
@@ -167,9 +19,78 @@ sudo systemd-machine-id-setup
 sudo reboot
 ```
 
-It turned out that there were DNS conflicts. There were several hosts called node1 on the network, and I couldn't use Hyper-V's Default Switch since the host runs Windows Server. I could have used static IP addresses outside the DHCP range, but then I wouldn't use mDNS at all. I could also have had two vSwitches, one private switch for mDNS and another one to the internet. Instead I changed the hostname again and put my initials as a prefix, which made the mDNS conflict go away.
+VS1 connects the VMs to a network shared with other machines, where other hosts were already called `node1`. That caused mDNS conflicts, so the hostnames have the prefix `keat-`. Static IP addresses or a separate private switch for mDNS would also have worked, but a unique prefix solved it without changing the network.
 
-### Not solved yet
+## Configuration management
 
-- The SSH host keys are copied with the disk too, and I haven't created new ones per VM. It can be checked with `ansible all -a "ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub" --ask-vault-pass`.
-- The base image is made by hand and is the only part of the environment that isn't code. The next step is to build it with Packer, use the same roles as here, and give the image a version so it can be rebuilt when there are new updates.
+Ansible is used instead of an agent-based tool such as Puppet. The nodes only need SSH and Python, which Ubuntu ships with, so no agent has to be installed or maintained on them, and they keep running unaffected if the control node is down. The trade-off is that drift is only corrected when the playbook is run, while a Puppet agent checks in on a schedule and corrects it automatically. Ansible also runs tasks in the order they are written instead of working out the order from declared dependencies, so the task order matters.
+
+`ansible.cfg` in the repository root points to `inventory.ini`, and the playbooks are run from the root. `site.yml` runs three plays:
+
+| Play | Hosts | Roles |
+|---|---|---|
+| Base config for all servers | all | common |
+| Database tier | dbservers | db |
+| Web tier | webservers | webserver, flask_app |
+
+The database tier runs before the web tier so that the database is in place before the app is deployed. The first play gathers facts from all hosts, which the web tier depends on.
+
+| Role | Manages | Handler |
+|---|---|---|
+| common | curl, vim and tree. The user devops_admin in the sudo group, with the public key `~/.ssh/devops_admin.pub` from the control node | - |
+| db | MariaDB and PyMySQL. The database appdb with the table messages, and the user appuser with SELECT and INSERT on appdb. `bind-address = 0.0.0.0` | restart mariadb |
+| webserver | nginx and `/var/www/html/index.html` from a template | restart nginx |
+| flask_app | Flask, PyMySQL and Gunicorn. `/opt/app/app.py` from a template, and the systemd unit `app.service` that runs Gunicorn on port 8000 as www-data | restart app |
+
+Handlers restart a service only when its configuration has changed.
+
+The tasks use modules that describe a desired state (`apt`, `service`, `user`, `file`, `template`, `systemd`), so the playbook can be run again at any time and only changes what differs. An earlier version started the app with `shell: nohup ... &`, which started a new process on every run and didn't survive a reboot. Running it as a systemd service with `state: started` and `enabled: true` fixed both.
+
+Templates take their values from facts and inventory variables rather than hard-coded values. The start page shows hostname, IP address and OS from facts. `app.py` gets the database address from node2's facts and the password from Vault. The CMDB report uses facts plus the Hyper-V details in `host_vars`. Pointing the inventory at other hosts builds an identical environment, for example for testing.
+
+## Inventory
+
+`inventory.ini` is a static inventory with the groups webservers and dbservers. `inventory.py` is a dynamic inventory that answers `--list` and `--host` with JSON and currently returns the same hosts and groups. It is used with `-i inventory.py`. In a cloud environment the script would get the hosts from the provider's API instead, so new VMs don't have to be added to the inventory by hand.
+
+## Secrets
+
+- The database password is stored as `vault_db_password` in `group_vars/all/vault.yml`, encrypted with Ansible Vault (AES256). The vault password is entered with `--ask-vault-pass`, and `.vault_pass` files are ignored by Git.
+- The task that creates the database user runs with `no_log: true`, so the password doesn't show in the output.
+- `become: true` is set per play, and the sudo password is entered with `-K`.
+- The control node logs in with ed25519 keys. Private keys are ignored by Git (`id_*`, `*.pem`, `devops_admin`).
+
+The repository contains no plain-text passwords. On node1, however, the password ends up in plain text in `/opt/app/app.py` (mode 0600, owner www-data). See [Known limitations](#known-limitations).
+
+## CMDB reports
+
+`report.yml` collects facts and the list of installed packages from all hosts and writes one Markdown file per host to `reports/` on the control node: role, CPU, RAM, IP addresses, OS, uptime, disks and all packages with versions. The Hyper-V details (VHDX path and type, virtual switch) can't be seen from inside a VM, so they are kept in `host_vars/`.
+
+The reports are committed to Git and work as a simple CMDB. Since they are generated from the servers instead of maintained by hand, they are accurate as of the last run, and `git diff` after a new run shows what has changed on the servers.
+
+## Dependencies and failure impact
+
+| Down | Impact |
+|---|---|
+| Control node | The nodes keep running with the last applied configuration. No configuration changes, new database users or password changes until it is back. |
+| mDNS (avahi) | Names under `.local` stop resolving. Ansible can't connect to the nodes and clients can't reach the site by name. node1 still reaches the database, since it connects to node2 by IP address. |
+| node1 | The start page and the app are unreachable. |
+| node2 | The app returns HTTP 500. The start page on node1 still works. |
+| Hyper-V host or VS1 | Everything stops. The VMs are restored from VHDX backups. Stopping MariaDB during the backup gives a consistent copy of the database. |
+
+## Verification and troubleshooting
+
+| Command | Shows |
+|---|---|
+| `curl http://keat-node1.local:8000` | that the app responds and reads from node2 |
+| `ss -tlnp` | listening ports and addresses |
+| `journalctl -u app` | the app's log and Python errors |
+| `my_print_defaults mysqld` | the settings MariaDB reads |
+
+## Known limitations
+
+- The database password is in plain text in `/opt/app/app.py` on node1 and can show up in the app's error log. It should be passed to the service as an environment variable instead.
+- MariaDB listens on all interfaces and appuser can connect from any host. Access should be limited to node1.
+- nginx and the app are served on separate ports. nginx should act as a reverse proxy in front of Gunicorn.
+- The app gets the database address at deploy time from the facts of the host named `node2`. The web tier can't be run on its own with `--limit webservers`, and if node2 gets a new address from DHCP the playbook has to be run again.
+- The golden image is built by hand, and the playbooks don't upgrade packages, so new VMs are only as up to date as the image. Building the image with Packer, using the same roles, would make it reproducible and simple to rebuild with current updates.
+- The clone procedure doesn't regenerate the SSH host keys, so the VMs may share host keys. The keys should be removed from the image and generated on first boot.
