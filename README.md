@@ -14,7 +14,7 @@ Ubuntu Server 24.04 on Hyper-V, virtual switch VS1. The hosts find each other wi
 
 ## How it is built
 
-All VMs are cloned from the same read-only base disk, a golden image (golden master) that only contains the OS, SSH and avahi. Everything else is applied by Ansible, so the configuration is kept in the playbooks and not in the image. That way the image doesn't have to be rebuilt for every change. After cloning, each VM gets its own hostname and machine-id.
+All VMs are cloned from a golden image, a read-only disk where Ubuntu Server 24.04 is already installed and updated, with SSH and avahi added. A new VM can be deployed quickly without installing Ubuntu every time, and all configuration after that is done with Ansible, so the image doesn't have to be rebuilt for every change. After cloning, each VM gets its own hostname and machine-id.
 
 `site.yml` applies the roles in this order: base config, database tier, web tier.
 
