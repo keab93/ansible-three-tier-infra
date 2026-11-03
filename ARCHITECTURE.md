@@ -156,6 +156,17 @@ A clone is an exact copy, so all servers think they are the same server. Everyth
 - Hostname: set with `hostnamectl` and replaced in `/etc/hosts`.
 - machine-id: `systemd-machine-id-setup` only creates a new ID if `/etc/machine-id` is empty, so the file is emptied first.
 
+Run on each VM after cloning:
+
+```bash
+NEW=keat-node1   # keat-node2 and keat-controlnode on the other VMs
+sudo hostnamectl set-hostname $NEW
+sudo sed -i "s/base/$NEW/g" /etc/hosts
+sudo truncate -s 0 /etc/machine-id
+sudo systemd-machine-id-setup
+sudo reboot
+```
+
 It turned out that there were DNS conflicts. There were several hosts called node1 on the network, and I couldn't use Hyper-V's Default Switch since the host runs Windows Server. I could have used static IP addresses outside the DHCP range, but then I wouldn't use mDNS at all. I could also have had two vSwitches, one private switch for mDNS and another one to the internet. Instead I changed the hostname again and put my initials as a prefix, which made the mDNS conflict go away.
 
 ### Not solved yet
