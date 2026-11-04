@@ -18,10 +18,10 @@
 
 - name: Create user and authenticate with secret in mysql
   ansible.mysql.mysql_user:
-    name: appuser
+    name: "{{ db_user }}"
     host: "%"
-    password: "{{ vault_db_password }}"
-    priv: "appdb.*:SELECT,INSERT"
+    password: "{{ db_password }}"
+    priv: "{{ db_name }}.*:SELECT,INSERT"
     login_unix_socket: /run/mysqld/mysqld.sock
   no_log: true
 
@@ -36,12 +36,12 @@
 
 - name: App database exists
   ansible.mysql.mysql_db:
-    name: appdb
+    name: "{{ db_name }}"
     login_unix_socket: /run/mysqld/mysqld.sock
 
 - name: Table with data
   ansible.mysql.mysql_query:
-    login_db: appdb
+    login_db: "{{ db_name }}"
     login_unix_socket: /run/mysqld/mysqld.sock
     query:
       - CREATE TABLE IF NOT EXISTS messages (id INT PRIMARY KEY, text VARCHAR(100))

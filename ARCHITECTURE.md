@@ -48,7 +48,7 @@ Handlers restart a service only when its configuration has changed.
 
 The tasks use modules that describe a desired state (`apt`, `service`, `user`, `file`, `template`, `systemd`), so the playbook can be run again at any time and only changes what differs. The check after every change is to run `site.yml` twice in a row: the second run on unchanged servers must end with `changed=0` on both nodes. An earlier version started the app with `shell: nohup ... &`, which started a new process on every run and didn't survive a reboot. Running it as a systemd service with `state: started` and `enabled: true` fixed both.
 
-Templates take their values from facts and inventory variables rather than hard-coded values. The start page shows hostname, IP address and OS from facts. `app.py` gets the database address from node2's facts and the password from Vault. The CMDB report uses facts plus the Hyper-V details in `host_vars`. Pointing the inventory at other hosts builds an identical environment, for example for testing.
+Templates take their values from facts and inventory variables rather than hard-coded values. The start page shows hostname, IP address and OS from facts. `app.py` gets the database name, user and host name from `group_vars/all/vars.yml`, where the host name is node2's `ansible_host` from the inventory, and the password from Vault. The CMDB report uses facts plus the Hyper-V details in `host_vars`. Pointing the inventory at other hosts builds an identical environment, for example for testing.
 
 ## Inventory
 
@@ -74,7 +74,7 @@ The reports are committed to Git and work as a simple CMDB. Since they are gener
 | Down | Impact |
 |---|---|
 | Control node | The nodes keep running with the last applied configuration. No configuration changes, new database users or password changes until it is back. |
-| mDNS (avahi) | Names under `.local` stop resolving. Ansible can't connect to the nodes and clients can't reach the site by name. node1 still reaches the database, since it connects to node2 by IP address. |
+| mDNS (avahi) | Names under `.local` stop resolving. Ansible can't connect to the nodes, clients can't reach the site by name, and the app can't reach the database, since it connects to `keat-node2.local`. |
 | node1 | The start page and the app are unreachable. |
 | node2 | The app returns HTTP 500. The start page on node1 still works. |
 | Hyper-V host or VS1 | Everything stops. The VMs are restored from VHDX backups. Stopping MariaDB during the backup gives a consistent copy of the database. |
@@ -93,5 +93,4 @@ The reports are committed to Git and work as a simple CMDB. Since they are gener
 - The database password is in plain text in `/opt/app/app.py` on node1 and can show up in the app's error log. It should be passed to the service as an environment variable instead.
 - MariaDB listens on all interfaces and appuser can connect from any host. Access should be limited to node1.
 - nginx and the app are served on separate ports. nginx should act as a reverse proxy in front of Gunicorn.
-- The app gets the database address at deploy time from the facts of the host named `node2`. The web tier can't be run on its own with `--limit webservers`, and if node2 gets a new address from DHCP the playbook has to be run again.
 - The golden image is built by hand, and the playbooks don't upgrade packages, so new VMs are only as up to date as the image. Building the image with Packer, using the same roles, would make it reproducible and simple to rebuild with current updates.

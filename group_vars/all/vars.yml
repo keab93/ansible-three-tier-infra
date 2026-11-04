@@ -1,0 +1,5 @@
+---
+db_name: appdb
+db_user: appuser
+db_password: "{{ vault_db_password }}"
+db_host: "{{ hostvars[groups['dbservers'][0]]['ansible_host'] }}"
