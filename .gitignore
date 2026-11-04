@@ -17,3 +17,8 @@ devops_admin.pub
 # Local vault
 group_vars/all/vault.yml
 .ansible/
+
+# Packer
+packer/http/user-data
+packer/output/
+packer/packer_cache/

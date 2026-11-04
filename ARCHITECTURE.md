@@ -4,7 +4,7 @@ Design decisions, dependencies and known limitations for the environment describ
 
 ## Golden image
 
-All VMs are created from one golden image: a disk with Ubuntu Server 24.04 installed and updated, plus SSH and avahi-daemon for mDNS. The image is kept read-only. `hyper-v/create-vms.ps1` copies it once per VM and creates Generation 2 VMs on the virtual switch VS1.
+All VMs are created from one golden image: a disk with Ubuntu Server 24.04 installed and updated, plus SSH and avahi-daemon for mDNS. The image is built with Packer from `packer/` (see its [README](packer/README.md)): an unattended install from the Ubuntu ISO, a package upgrade, and a sealing step that empties the machine-id and removes the SSH host keys. Rebuilding it is how new VMs get current updates. The image is kept read-only. `hyper-v/create-vms.ps1` copies it once per VM and creates Generation 2 VMs on the virtual switch VS1.
 
 The image is kept minimal on purpose. Everything beyond the OS is applied by Ansible, so changes are made in the playbooks and don't require a new image. A larger image would give ready-to-use VMs sooner, but would have to be rebuilt for every change.
 
@@ -95,4 +95,4 @@ The reports are committed to Git and work as a simple CMDB. Since they are gener
 ## Known limitations
 
 - The database account and the firewall rule on node2 are tied to node1's IP address. If node1 gets a new address from DHCP, `site.yml` has to be run again, and the account and rule for the old address stay until they are removed by hand. A DHCP reservation or a static address would remove this.
-- The golden image is built by hand, and the playbooks don't upgrade packages, so new VMs are only as up to date as the image. Building the image with Packer, using the same roles, would make it reproducible and simple to rebuild with current updates.
+- The playbooks don't upgrade packages, so a VM is only as up to date as the image it was cloned from. Rebuild the image to get current updates.
