@@ -20,8 +20,8 @@ All VMs are cloned from a golden image, a read-only disk where Ubuntu Server 24.
 
 | Role | Purpose |
 |---|---|
-| common | base packages, the admin user devops_admin and its SSH key |
-| db | MariaDB, the database appdb and the application user |
+| common | base packages, the admin user devops_admin and its SSH key, the firewall |
+| db | MariaDB, the database appdb and the application user, allowed only from node1 |
 | webserver | nginx as a reverse proxy in front of the app, plus a facts page generated from Ansible facts |
 | flask_app | the Flask application as a systemd service |
 
@@ -58,5 +58,5 @@ Requirements: a Hyper-V host, the base image as `base.vhdx` and Ansible on the c
 
 ## Known limitations
 
-- MariaDB listens on all interfaces, and the application user can connect from any host.
+- The database account and firewall rule on node2 are tied to node1's IP address. If node1 gets a new address from DHCP, run `site.yml` again.
 - The golden image is built by hand.

@@ -16,14 +16,21 @@
     state: started
     enabled: true
 
-- name: Create user and authenticate with secret in mysql
+- name: Create the app user, allowed only from the app server
   ansible.mysql.mysql_user:
     name: "{{ db_user }}"
-    host: "%"
+    host: "{{ app_server_ip }}"
     password: "{{ db_password }}"
     priv: "{{ db_name }}.*:SELECT,INSERT"
     login_unix_socket: /run/mysqld/mysqld.sock
   no_log: true
+
+- name: Remove the app user that was allowed from any host
+  ansible.mysql.mysql_user:
+    name: "{{ db_user }}"
+    host: "%"
+    state: absent
+    login_unix_socket: /run/mysqld/mysqld.sock
 
 - name: Listen on all addresses
   ansible.builtin.copy:
@@ -33,6 +40,13 @@
       bind-address = 0.0.0.0
     mode: "0644"
   notify: Restart mariadb
+
+- name: Allow MariaDB from the app server only
+  community.general.ufw:
+    rule: allow
+    port: "3306"
+    proto: tcp
+    src: "{{ app_server_ip }}"
 
 - name: App database exists
   ansible.mysql.mysql_db:

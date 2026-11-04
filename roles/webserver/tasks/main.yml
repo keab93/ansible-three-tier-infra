@@ -34,6 +34,12 @@
   ansible.builtin.command: nginx -t
   changed_when: false
 
+- name: Allow HTTP
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
 - name: Nginx is running
   ansible.builtin.service:
     name: nginx
