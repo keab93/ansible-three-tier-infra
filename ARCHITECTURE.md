@@ -40,9 +40,9 @@ The database tier runs before the web tier so that the database is in place befo
 | Role | Manages | Handler |
 |---|---|---|
 | common | curl, vim and tree. The user devops_admin in the sudo group, with the public key `~/.ssh/devops_admin.pub` from the control node | - |
-| db | MariaDB and PyMySQL. The database appdb with the table messages, and the user appuser with SELECT and INSERT on appdb. `bind-address = 0.0.0.0` | restart mariadb |
-| webserver | nginx and `/var/www/html/index.html` from a template | restart nginx |
-| flask_app | Flask, PyMySQL and Gunicorn. `/opt/app/app.py` from a template, and the systemd unit `app.service` that runs Gunicorn on port 8000 as www-data | restart app |
+| db | MariaDB and PyMySQL. The database appdb with the table messages, and the user appuser with SELECT and INSERT on appdb. `bind-address = 0.0.0.0` | Restart mariadb |
+| webserver | nginx and `/var/www/html/index.html` from a template | Restart nginx |
+| flask_app | Flask, PyMySQL and Gunicorn. `/opt/app/app.py` from a template, and the systemd unit `app.service` that runs Gunicorn on port 8000 as www-data | Restart app |
 
 Handlers restart a service only when its configuration has changed.
 

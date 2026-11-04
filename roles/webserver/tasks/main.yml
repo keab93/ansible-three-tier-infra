@@ -1,5 +1,5 @@
 # tasks file for roles/webserver
-- name: nginx is installed
+- name: Nginx is installed
   ansible.builtin.apt:
     name: nginx
     state: present
@@ -8,9 +8,10 @@
   ansible.builtin.template:
     src: index.html.j2
     dest: /var/www/html/index.html
-  notify: restart nginx
+    mode: "0644"
+  notify: Restart nginx
 
-- name: nginx is running
+- name: Nginx is running
   ansible.builtin.service:
     name: nginx
     state: started
