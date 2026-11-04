@@ -46,7 +46,7 @@ The database tier runs before the web tier so that the database is in place befo
 
 Handlers restart a service only when its configuration has changed.
 
-The tasks use modules that describe a desired state (`apt`, `service`, `user`, `file`, `template`, `systemd`), so the playbook can be run again at any time and only changes what differs. An earlier version started the app with `shell: nohup ... &`, which started a new process on every run and didn't survive a reboot. Running it as a systemd service with `state: started` and `enabled: true` fixed both.
+The tasks use modules that describe a desired state (`apt`, `service`, `user`, `file`, `template`, `systemd`), so the playbook can be run again at any time and only changes what differs. The check after every change is to run `site.yml` twice in a row: the second run on unchanged servers must end with `changed=0` on both nodes. An earlier version started the app with `shell: nohup ... &`, which started a new process on every run and didn't survive a reboot. Running it as a systemd service with `state: started` and `enabled: true` fixed both.
 
 Templates take their values from facts and inventory variables rather than hard-coded values. The start page shows hostname, IP address and OS from facts. `app.py` gets the database address from node2's facts and the password from Vault. The CMDB report uses facts plus the Hyper-V details in `host_vars`. Pointing the inventory at other hosts builds an identical environment, for example for testing.
 
