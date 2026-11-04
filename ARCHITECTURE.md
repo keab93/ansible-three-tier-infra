@@ -42,13 +42,13 @@ The database tier runs before the web tier so that the database is in place befo
 | common | curl, vim and tree. The user devops_admin in the sudo group, with the public key `~/.ssh/devops_admin.pub` from the control node | - |
 | db | MariaDB and PyMySQL. The database appdb with the table messages, and the user appuser with SELECT and INSERT on appdb. `bind-address = 0.0.0.0` | Restart mariadb |
 | webserver | nginx and `/var/www/html/index.html` from a template | Restart nginx |
-| flask_app | Flask, PyMySQL and Gunicorn. `/opt/app/app.py` from a template, and the systemd unit `app.service` that runs Gunicorn on port 8000 as www-data | Restart app |
+| flask_app | Flask, PyMySQL and Gunicorn. `/opt/app/app.py`, the environment file `/etc/app.env` with the database settings, and the systemd unit `app.service` that runs Gunicorn on port 8000 as www-data | Restart app |
 
 Handlers restart a service only when its configuration has changed.
 
 The tasks use modules that describe a desired state (`apt`, `service`, `user`, `file`, `template`, `systemd`), so the playbook can be run again at any time and only changes what differs. The check after every change is to run `site.yml` twice in a row: the second run on unchanged servers must end with `changed=0` on both nodes. An earlier version started the app with `shell: nohup ... &`, which started a new process on every run and didn't survive a reboot. Running it as a systemd service with `state: started` and `enabled: true` fixed both.
 
-Templates take their values from facts and inventory variables rather than hard-coded values. The start page shows hostname, IP address and OS from facts. `app.py` gets the database name, user and host name from `group_vars/all/vars.yml`, where the host name is node2's `ansible_host` from the inventory, and the password from Vault. The CMDB report uses facts plus the Hyper-V details in `host_vars`. Pointing the inventory at other hosts builds an identical environment, for example for testing.
+Templates take their values from facts and inventory variables rather than hard-coded values. The start page shows hostname, IP address and OS from facts. The app's environment file gets the database name, user and host name from `group_vars/all/vars.yml`, where the host name is node2's `ansible_host` from the inventory, and the password from Vault. The CMDB report uses facts plus the Hyper-V details in `host_vars`. Pointing the inventory at other hosts builds an identical environment, for example for testing.
 
 ## Inventory
 
@@ -61,7 +61,7 @@ Templates take their values from facts and inventory variables rather than hard-
 - `become: true` is set per play, and the sudo password is entered with `-K`.
 - The control node logs in with ed25519 keys. Private keys are ignored by Git (`id_*`, `*.pem`, `devops_admin`).
 
-The repository contains no plain-text passwords. On node1, however, the password ends up in plain text in `/opt/app/app.py` (mode 0600, owner www-data). See [Known limitations](#known-limitations).
+The repository contains no plain-text passwords. On node1 the password is in `/etc/app.env`, owned by root with mode 0600. systemd reads the file as root and passes the values to the app's environment, so `app.py` holds no secrets and a traceback in the log shows the variable name, not the password. The task that writes the file has `no_log: true`.
 
 ## CMDB reports
 
@@ -90,7 +90,6 @@ The reports are committed to Git and work as a simple CMDB. Since they are gener
 
 ## Known limitations
 
-- The database password is in plain text in `/opt/app/app.py` on node1 and can show up in the app's error log. It should be passed to the service as an environment variable instead.
 - MariaDB listens on all interfaces and appuser can connect from any host. Access should be limited to node1.
 - nginx and the app are served on separate ports. nginx should act as a reverse proxy in front of Gunicorn.
 - The golden image is built by hand, and the playbooks don't upgrade packages, so new VMs are only as up to date as the image. Building the image with Packer, using the same roles, would make it reproducible and simple to rebuild with current updates.

@@ -5,6 +5,7 @@ After=network.target
 [Service]
 User=www-data
 WorkingDirectory=/opt/app
+EnvironmentFile=/etc/app.env
 ExecStart=/usr/bin/gunicorn --bind 0.0.0.0:8000 app:app
 Restart=always
 
