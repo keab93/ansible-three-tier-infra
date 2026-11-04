@@ -25,12 +25,15 @@
     login_unix_socket: /run/mysqld/mysqld.sock
   no_log: true
 
-- name: Remove the app user that was allowed from any host
+- name: Remove the app user for other hosts
   ansible.mysql.mysql_user:
     name: "{{ db_user }}"
-    host: "%"
+    host: "{{ item }}"
     state: absent
     login_unix_socket: /run/mysqld/mysqld.sock
+  loop:
+    - "%"
+    - localhost
 
 - name: Listen on all addresses
   ansible.builtin.copy:
