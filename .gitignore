@@ -13,3 +13,6 @@ id_*
 devops_admin
 devops_admin.pub
 
+
+# Local vault
+group_vars/all/vault.yml
