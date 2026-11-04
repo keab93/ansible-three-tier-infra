@@ -27,6 +27,8 @@ All VMs are cloned from a golden image, a read-only disk where Ubuntu Server 24.
 
 The database password is encrypted with Ansible Vault. Vault and sudo passwords are entered at runtime and are not stored in the repository.
 
+Every push and pull request is checked with ansible-lint in GitHub Actions.
+
 `report.yml` writes a report per server from Ansible facts to `reports/`. Committed to Git, the reports work as a simple CMDB, and `git diff` shows what has changed between runs. `inventory.py` is a dynamic inventory that returns the same hosts as `inventory.ini`.
 
 Design decisions are described in [ARCHITECTURE.md](ARCHITECTURE.md).
