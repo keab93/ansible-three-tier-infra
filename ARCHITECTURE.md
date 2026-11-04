@@ -41,14 +41,14 @@ The database tier runs before the web tier so that the database is in place befo
 |---|---|---|
 | common | curl, vim and tree. The user devops_admin in the sudo group, with the public key `~/.ssh/devops_admin.pub` from the control node | - |
 | db | MariaDB and PyMySQL. The database appdb with the table messages, and the user appuser with SELECT and INSERT on appdb. `bind-address = 0.0.0.0` | Restart mariadb |
-| webserver | nginx and `/var/www/html/index.html` from a template | Restart nginx |
-| flask_app | Flask, PyMySQL and Gunicorn. `/opt/app/app.py`, the environment file `/etc/app.env` with the database settings, and the systemd unit `app.service` that runs Gunicorn on port 8000 as www-data | Restart app |
+| webserver | nginx as a reverse proxy: `app.conf` forwards port 80 to Gunicorn on `127.0.0.1:{{ app_port }}`, the default site is disabled, and `/facts.html` is a page from a template. `nginx -t` runs before the reload | Reload nginx |
+| flask_app | Flask, PyMySQL and Gunicorn. `/opt/app/app.py`, the environment file `/etc/app.env` with the database settings, and the systemd unit `app.service` that runs Gunicorn on `127.0.0.1:8000` as www-data | Restart app |
 
-Handlers restart a service only when its configuration has changed.
+Handlers restart or reload a service only when its configuration has changed.
 
 The tasks use modules that describe a desired state (`apt`, `service`, `user`, `file`, `template`, `systemd`), so the playbook can be run again at any time and only changes what differs. The check after every change is to run `site.yml` twice in a row: the second run on unchanged servers must end with `changed=0` on both nodes. An earlier version started the app with `shell: nohup ... &`, which started a new process on every run and didn't survive a reboot. Running it as a systemd service with `state: started` and `enabled: true` fixed both.
 
-Templates take their values from facts and inventory variables rather than hard-coded values. The start page shows hostname, IP address and OS from facts. The app's environment file gets the database name, user and host name from `group_vars/all/vars.yml`, where the host name is node2's `ansible_host` from the inventory, and the password from Vault. The CMDB report uses facts plus the Hyper-V details in `host_vars`. Pointing the inventory at other hosts builds an identical environment, for example for testing.
+Templates take their values from facts and inventory variables rather than hard-coded values. The facts page shows hostname, IP address and OS from facts. The app's environment file gets the database name, user and host name from `group_vars/all/vars.yml`, where the host name is node2's `ansible_host` from the inventory, and the password from Vault. The CMDB report uses facts plus the Hyper-V details in `host_vars`. Pointing the inventory at other hosts builds an identical environment, for example for testing.
 
 ## Inventory
 
@@ -75,15 +75,16 @@ The reports are committed to Git and work as a simple CMDB. Since they are gener
 |---|---|
 | Control node | The nodes keep running with the last applied configuration. No configuration changes, new database users or password changes until it is back. |
 | mDNS (avahi) | Names under `.local` stop resolving. Ansible can't connect to the nodes, clients can't reach the site by name, and the app can't reach the database, since it connects to `keat-node2.local`. |
-| node1 | The start page and the app are unreachable. |
-| node2 | The app returns HTTP 500. The start page on node1 still works. |
+| node1 | The site is unreachable. |
+| node2 | The app returns HTTP 500. `/facts.html` on node1 still works. |
 | Hyper-V host or VS1 | Everything stops. The VMs are restored from VHDX backups. Stopping MariaDB during the backup gives a consistent copy of the database. |
 
 ## Verification and troubleshooting
 
 | Command | Shows |
 |---|---|
-| `curl http://keat-node1.local:8000` | that the app responds and reads from node2 |
+| `curl http://keat-node1.local` | that nginx forwards to the app and the app reads from node2 |
+| `nginx -t` | whether the nginx config is valid |
 | `ss -tlnp` | listening ports and addresses |
 | `journalctl -u app` | the app's log and Python errors |
 | `my_print_defaults mysqld` | the settings MariaDB reads |
@@ -91,5 +92,4 @@ The reports are committed to Git and work as a simple CMDB. Since they are gener
 ## Known limitations
 
 - MariaDB listens on all interfaces and appuser can connect from any host. Access should be limited to node1.
-- nginx and the app are served on separate ports. nginx should act as a reverse proxy in front of Gunicorn.
 - The golden image is built by hand, and the playbooks don't upgrade packages, so new VMs are only as up to date as the image. Building the image with Packer, using the same roles, would make it reproducible and simple to rebuild with current updates.

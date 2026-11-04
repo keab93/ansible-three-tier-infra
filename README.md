@@ -7,7 +7,7 @@ Ansible configuration for a web application in three tiers (nginx, Flask, MariaD
 | Host | Inventory group | Services |
 |---|---|---|
 | keat-controlnode | - | Ansible |
-| keat-node1 | webservers | nginx :80, Flask with Gunicorn :8000 |
+| keat-node1 | webservers | nginx :80 as reverse proxy, Flask with Gunicorn on 127.0.0.1:8000 |
 | keat-node2 | dbservers | MariaDB :3306 |
 
 Ubuntu Server 24.04 on Hyper-V, virtual switch VS1. The hosts find each other with mDNS (`.local`). If you use other hostnames, update `inventory.ini` and `inventory.py`.
@@ -22,7 +22,7 @@ All VMs are cloned from a golden image, a read-only disk where Ubuntu Server 24.
 |---|---|
 | common | base packages, the admin user devops_admin and its SSH key |
 | db | MariaDB, the database appdb and the application user |
-| webserver | nginx with a start page generated from Ansible facts |
+| webserver | nginx as a reverse proxy in front of the app, plus a facts page generated from Ansible facts |
 | flask_app | the Flask application as a systemd service |
 
 The database password is encrypted with Ansible Vault. Vault and sudo passwords are entered at runtime and are not stored in the repository.
@@ -54,10 +54,9 @@ Requirements: a Hyper-V host, the base image as `base.vhdx` and Ansible on the c
    ansible-playbook site.yml -K --ask-vault-pass
    ```
 
-`curl http://keat-node1.local:8000` should return the data stored in MariaDB on node2. Once the vault exists, all commands need `--ask-vault-pass`, including `ansible-playbook report.yml` and `ansible-inventory -i inventory.py --list`.
+`curl http://keat-node1.local` should return the data stored in MariaDB on node2, and `/facts.html` shows node1's facts. Once the vault exists, all commands need `--ask-vault-pass`, including `ansible-playbook report.yml` and `ansible-inventory -i inventory.py --list`.
 
 ## Known limitations
 
 - MariaDB listens on all interfaces, and the application user can connect from any host.
-- nginx and the application are served on separate ports. nginx is not yet a reverse proxy.
 - The golden image is built by hand.
