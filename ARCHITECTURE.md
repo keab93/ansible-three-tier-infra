@@ -8,7 +8,7 @@ All VMs are created from one golden image: a disk with Ubuntu Server 24.04 insta
 
 The image is kept minimal on purpose. Everything beyond the OS is applied by Ansible, so changes are made in the playbooks and don't require a new image. A larger image would give ready-to-use VMs sooner, but would have to be rebuilt for every change.
 
-A clone is an exact copy, so the values that must be unique per machine are set after cloning. `systemd-machine-id-setup` only generates a new ID when `/etc/machine-id` is empty, so the file is emptied first. Run on each VM:
+A clone is an exact copy, so the values that must be unique per machine are set after cloning: hostname, machine-id and SSH host keys. `systemd-machine-id-setup` only generates a new ID when `/etc/machine-id` is empty, so the file is emptied first. Run on each VM:
 
 ```bash
 NEW=keat-node1   # keat-node2 and keat-controlnode on the other VMs
@@ -16,6 +16,8 @@ sudo hostnamectl set-hostname $NEW
 sudo sed -i "s/base/$NEW/g" /etc/hosts
 sudo truncate -s 0 /etc/machine-id
 sudo systemd-machine-id-setup
+sudo rm -f /etc/ssh/ssh_host_*
+sudo ssh-keygen -A
 sudo reboot
 ```
 
@@ -93,4 +95,3 @@ The reports are committed to Git and work as a simple CMDB. Since they are gener
 - nginx and the app are served on separate ports. nginx should act as a reverse proxy in front of Gunicorn.
 - The app gets the database address at deploy time from the facts of the host named `node2`. The web tier can't be run on its own with `--limit webservers`, and if node2 gets a new address from DHCP the playbook has to be run again.
 - The golden image is built by hand, and the playbooks don't upgrade packages, so new VMs are only as up to date as the image. Building the image with Packer, using the same roles, would make it reproducible and simple to rebuild with current updates.
-- The clone procedure doesn't regenerate the SSH host keys, so the VMs may share host keys. The keys should be removed from the image and generated on first boot.

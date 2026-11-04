@@ -59,4 +59,4 @@ Requirements: a Hyper-V host, the base image as `base.vhdx` and Ansible on the c
 - The database password is written in plain text to `/opt/app/app.py` on node1.
 - MariaDB listens on all interfaces, and the application user can connect from any host.
 - nginx and the application are served on separate ports. nginx is not yet a reverse proxy.
-- The base image is built by hand, and the clone procedure does not regenerate SSH host keys.
+- The golden image is built by hand.
