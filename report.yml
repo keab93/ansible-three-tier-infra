@@ -1,3 +1,4 @@
+#Gatherfacts and generate report
 - name: Generate server report
   hosts: all
 
