@@ -1,6 +1,6 @@
 # Architecture
 
-Design decisions, dependencies and known limitations for the environment described in the [README](README.md).
+Design decisions, dependencies and known limitations for the environment described in the [README](README.md). The [infrastructure topology](docs/infrastructure-topology-graph.md) shows the tiers and connections as a diagram.
 
 ## Golden image
 

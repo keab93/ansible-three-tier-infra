@@ -12,6 +12,8 @@ Ansible configuration for a web application in three tiers (nginx, Flask, MariaD
 
 Ubuntu Server 24.04 on Hyper-V, virtual switch VS1. The hosts find each other with mDNS (`.local`). If you use other hostnames, update `inventory.ini` and `inventory.py`.
 
+The tiers, ports and firewall rules are drawn in the [infrastructure topology](docs/infrastructure-topology-graph.md).
+
 ## How it is built
 
 All VMs are cloned from a golden image, a read-only disk where Ubuntu Server 24.04 is already installed and updated, with SSH and avahi added. The image is built with Packer. A new VM can be deployed quickly without installing Ubuntu every time, and all configuration after that is done with Ansible, so the image doesn't have to be rebuilt for every change. After cloning, each VM gets its own hostname and machine-id.
