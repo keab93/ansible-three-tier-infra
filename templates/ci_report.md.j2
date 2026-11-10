@@ -7,7 +7,7 @@
 - All IPv4 addresses: {{ ansible_facts['all_ipv4_addresses'] | join(', ') }}
 - All IPv6 addresses: {{ ansible_facts['all_ipv6_addresses'] | join(', ') }}
 - OS: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
-- Uptime: {{ ansible_facts['uptime_seconds'] // 86400 }} days
+- Uptime: {{ ansible_facts['uptime_seconds'] // 86400 }} days **and legend says that the servers are still up *even now***
 - Virtual switch: {{ vm_switch }}
 
 ### Disk info
