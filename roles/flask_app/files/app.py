@@ -1,12 +1,19 @@
+import os
+
 import pymysql
 from flask import Flask
 
-DB_HOST = "{{ hostvars['node2']['ansible_default_ipv4']['address'] }}"
 app = Flask(__name__)
+
 
 @app.route("/")
 def index():
-    conn = pymysql.connect(host=DB_HOST, user="appuser", password="{{ vault_db_password }}", database="appdb")
+    conn = pymysql.connect(
+        host=os.environ["DB_HOST"],
+        user=os.environ["DB_USER"],
+        password=os.environ["DB_PASSWORD"],
+        database=os.environ["DB_NAME"],
+    )
     with conn.cursor() as cur:
         cur.execute("SELECT text FROM messages")
         rows = cur.fetchall()

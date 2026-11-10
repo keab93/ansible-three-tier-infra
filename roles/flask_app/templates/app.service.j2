@@ -5,7 +5,8 @@ After=network.target
 [Service]
 User=www-data
 WorkingDirectory=/opt/app
-ExecStart=/usr/bin/gunicorn --bind 0.0.0.0:8000 app:app
+EnvironmentFile=/etc/app.env
+ExecStart=/usr/bin/gunicorn --bind 127.0.0.1:{{ app_port }} app:app
 Restart=always
 
 [Install]

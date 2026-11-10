@@ -9,4 +9,5 @@
       ansible.builtin.template:
         src: ci_report.md.j2
         dest: "reports/{{ ansible_facts['hostname'] }}_inventory_report.md"
+        mode: "0644"
       delegate_to: localhost

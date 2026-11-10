@@ -1,48 +1,67 @@
 ---
 # tasks file for roles/db
-- name: database is installed
+- name: Database is installed
   ansible.builtin.apt:
     name: mariadb-server
     state: present
 
-- name: python mysql module is installed
+- name: Python mysql module is installed
   ansible.builtin.apt:
     name: python3-pymysql
     state: present
 
-- name: database service is started and enabled
+- name: Database service is started and enabled
   ansible.builtin.service:
     name: mariadb
     state: started
     enabled: true
 
-- name: create user and authenticate with secret in mysql
-  community.mysql.mysql_user:
-    name: appuser
-    host: "%"
-    password: "{{ vault_db_password }}"
-    priv: "appdb.*:SELECT,INSERT"
+- name: Create the app user, allowed only from the app server
+  ansible.mysql.mysql_user:
+    name: "{{ db_user }}"
+    host: "{{ app_server_ip }}"
+    password: "{{ db_password }}"
+    priv: "{{ db_name }}.*:SELECT,INSERT"
     login_unix_socket: /run/mysqld/mysqld.sock
   no_log: true
 
-- name: listen on all addresses
+- name: Remove the app user for other hosts
+  ansible.mysql.mysql_user:
+    name: "{{ db_user }}"
+    host: "{{ item }}"
+    state: absent
+    login_unix_socket: /run/mysqld/mysqld.sock
+  loop:
+    - "%"
+    - localhost
+
+- name: Listen on all addresses
   ansible.builtin.copy:
     dest: /etc/mysql/mariadb.conf.d/99-bind.cnf
     content: |
       [mysqld]
       bind-address = 0.0.0.0
     mode: "0644"
-  notify: restart mariadb
+  notify: Restart mariadb
 
-- name: app database exists
-  community.mysql.mysql_db:
-    name: appdb
+- name: Allow MariaDB from the app server only
+  community.general.ufw:
+    rule: allow
+    port: "3306"
+    proto: tcp
+    src: "{{ app_server_ip }}"
+
+- name: App database exists
+  ansible.mysql.mysql_db:
+    name: "{{ db_name }}"
     login_unix_socket: /run/mysqld/mysqld.sock
 
-- name: table with data
-  community.mysql.mysql_query:
-    login_db: appdb
+- name: Table with data
+  ansible.mysql.mysql_query:
+    login_db: "{{ db_name }}"
     login_unix_socket: /run/mysqld/mysqld.sock
     query:
       - CREATE TABLE IF NOT EXISTS messages (id INT PRIMARY KEY, text VARCHAR(100))
       - INSERT IGNORE INTO messages VALUES (1, 'Hello from MariaDB on node2!')
+  register: db_table
+  changed_when: db_table.rowcount | max > 0

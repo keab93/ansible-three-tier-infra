@@ -1,16 +1,46 @@
 # tasks file for roles/webserver
-- name: nginx is installed
+- name: Nginx is installed
   ansible.builtin.apt:
     name: nginx
     state: present
 
-- name: Deploy index.html
+- name: Deploy the facts page
   ansible.builtin.template:
     src: index.html.j2
-    dest: /var/www/html/index.html
-  notify: restart nginx
+    dest: /var/www/html/facts.html
+    mode: "0644"
 
-- name: nginx is running
+- name: Deploy the reverse proxy config
+  ansible.builtin.template:
+    src: app.conf.j2
+    dest: /etc/nginx/sites-available/app.conf
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Enable the reverse proxy config
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/app.conf
+    dest: /etc/nginx/sites-enabled/app.conf
+    state: link
+  notify: Reload nginx
+
+- name: Disable the default site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Check the nginx config
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Allow HTTP
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: Nginx is running
   ansible.builtin.service:
     name: nginx
     state: started

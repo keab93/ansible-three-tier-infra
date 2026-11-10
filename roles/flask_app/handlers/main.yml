@@ -1,6 +1,6 @@
 ---
 # handlers file for roles/flask_app
-- name: restart app
+- name: Restart app
   ansible.builtin.systemd:
     name: app
     state: restarted

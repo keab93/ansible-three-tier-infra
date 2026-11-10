@@ -4,6 +4,7 @@
       - curl
       - vim
       - tree
+      - ufw
     state: present
     update_cache: true
 
@@ -21,3 +22,21 @@
     user: devops_admin
     key: "{{ lookup('file', '~/.ssh/devops_admin.pub') }}"
     state: present
+
+- name: Allow SSH
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Allow mDNS
+  community.general.ufw:
+    rule: allow
+    port: "5353"
+    proto: udp
+
+- name: Deny other incoming traffic and enable the firewall
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    direction: incoming

@@ -12,22 +12,35 @@
   ansible.builtin.file:
     path: /opt/app
     state: directory
+    mode: "0755"
 
-- name: systemd service for the app
+- name: Deploy the app environment file
+  ansible.builtin.template:
+    src: app.env.j2
+    dest: /etc/app.env
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart app
+
+- name: Systemd service for the app
   ansible.builtin.template:
     src: app.service.j2
     dest: /etc/systemd/system/app.service
-  notify: restart app
+    mode: "0644"
+  notify: Restart app
 
-- name: python app
-  ansible.builtin.template:
-    src: app.py.j2
-    owner: www-data
+- name: Python app
+  ansible.builtin.copy:
+    src: app.py
     dest: /opt/app/app.py
-    mode: '0600'
-  notify: restart app
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart app
 
-- name: systemd app handle
+- name: Systemd app handle
   ansible.builtin.systemd:
     name: app
     state: started
