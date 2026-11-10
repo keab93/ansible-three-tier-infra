@@ -22,3 +22,6 @@ group_vars/all/vault.yml
 packer/http/user-data
 packer/output/
 packer/packer_cache/
+
+# Notes
+TODO
