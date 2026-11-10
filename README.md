@@ -12,6 +12,8 @@ Ansible configuration for a web application in three tiers (nginx, Flask, MariaD
 
 Ubuntu Server 24.04 on Hyper-V, virtual switch VS1. The hosts find each other with mDNS (`.local`). If you use other hostnames, update `inventory.ini` and `inventory.py`.
 
+![Infrastructure topology](docs/topology.drawio.svg)
+
 The tiers, ports and firewall rules are drawn in the [infrastructure topology](docs/infrastructure-topology-graph.md).
 
 ## How it is built
