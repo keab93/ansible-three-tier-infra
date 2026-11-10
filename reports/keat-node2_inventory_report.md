@@ -7,7 +7,7 @@
 - All IPv4 addresses: 10.6.69.25
 - All IPv6 addresses: fe80::215:5dff:fe45:c08
 - OS: Ubuntu 24.04
-- Uptime: 21 days
+- Uptime: 26 days **and legend says that the servers are still up *even now***
 - Virtual switch: VS1
 
 ### Disk info
@@ -33,8 +33,8 @@ Hyper-V virtual hard disk.
 - apport-core-dump-handler 2.28.3-0ubuntu0.1
 - apport-symptoms 0.25
 - appstream 1.0.2-1build6
-- apt 2.8.3
-- apt-utils 2.8.3
+- apt 2.8.4ubuntu0.1
+- apt-utils 2.8.4ubuntu0.1
 - avahi-daemon 0.8-13ubuntu6.2
 - base-files 13ubuntu10.5
 - base-passwd 3.6.3build1
@@ -54,7 +54,7 @@ Hyper-V virtual hard disk.
 - busybox-initramfs 1:1.36.1-6ubuntu3.1
 - busybox-static 1:1.36.1-6ubuntu3.1
 - byobu 6.11-0ubuntu1.1
-- ca-certificates 20260816ubuntu0.24.04.1
+- ca-certificates 20260816ubuntu0.24.04.2
 - cloud-guest-utils 0.33-1
 - cloud-init 26.1-0ubuntu1~24.04.1
 - cloud-initramfs-copymods 0.49~24.04.1
@@ -175,7 +175,7 @@ Hyper-V virtual hard disk.
 - libaom3 3.8.2-2ubuntu0.2
 - libapparmor1 4.0.1really4.0.1-0ubuntu0.24.04.8
 - libappstream5 1.0.2-1build6
-- libapt-pkg6.0t64 2.8.3
+- libapt-pkg6.0t64 2.8.4ubuntu0.1
 - libarchive13t64 3.7.2-2ubuntu0.9
 - libargon2-1 0~20190702+dfsg-4build1
 - libassuan0 2.5.6-1build1
@@ -382,7 +382,7 @@ Hyper-V virtual hard disk.
 - libpcap0.8t64 1.10.4-4.1ubuntu3.1
 - libpci3 1:3.10.0-2build1
 - libpcre2-8-0 10.42-4ubuntu2.2
-- libperl5.38t64 5.38.2-3.2ubuntu0.6
+- libperl5.38t64 5.38.2-3.2ubuntu0.7
 - libpipeline1 1.5.7-2
 - libplist-2.0-4 2.3.0-1~exp2build2
 - libplymouth5 24.004.60-1ubuntu7.2
@@ -582,9 +582,9 @@ Hyper-V virtual hard disk.
 - patch 2.7.6-7build3
 - pci.ids 0.0~2024.03.31-1ubuntu0.1
 - pciutils 1:3.10.0-2build1
-- perl 5.38.2-3.2ubuntu0.6
-- perl-base 5.38.2-3.2ubuntu0.6
-- perl-modules-5.38 5.38.2-3.2ubuntu0.6
+- perl 5.38.2-3.2ubuntu0.7
+- perl-base 5.38.2-3.2ubuntu0.7
+- perl-modules-5.38 5.38.2-3.2ubuntu0.7
 - pinentry-curses 1.2.1-3ubuntu5
 - plymouth 24.004.60-1ubuntu7.2
 - plymouth-theme-ubuntu-text 24.004.60-1ubuntu7.2
@@ -656,7 +656,7 @@ Hyper-V virtual hard disk.
 - python3-pkg-resources 68.1.2-2ubuntu1.2
 - python3-problem-report 2.28.3-0ubuntu0.1
 - python3-ptyprocess 0.7.0-5
-- python3-pyasn1 0.4.8-4ubuntu0.3
+- python3-pyasn1 0.4.8-4ubuntu0.4
 - python3-pyasn1-modules 0.2.8-1
 - python3-pygments 2.17.2+dfsg-1
 - python3-pymysql 1.0.2-2ubuntu1.1
@@ -671,7 +671,7 @@ Hyper-V virtual hard disk.
 - python3-six 1.16.0-4
 - python3-software-properties 0.99.49.4
 - python3-systemd 235-1build4
-- python3-twisted 24.3.0-1ubuntu0.2
+- python3-twisted 24.3.0-1ubuntu0.3
 - python3-tz 2024.1-2
 - python3-update-manager 1:24.04.12
 - python3-urllib3 2.0.7-1ubuntu0.8
